@@ -6,6 +6,7 @@ import com.gabriel.rentacar.entity.AccountEntity;
 import com.gabriel.rentacar.exception.accountException.*;
 import com.gabriel.rentacar.mapper.AccountMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
+import com.gabriel.rentacar.utils.EmailValidation;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Service;
 
@@ -222,18 +223,9 @@ public class AccountService {
 	}
 
 	private String validateEmailFormatAndNormalize(String email) {
-		if (email == null || email.trim().isEmpty()) {
-			throw new AccountInvalidDataException("email", "Email cannot be empty");
-		}
+		EmailValidation emailValidator = new EmailValidation();
 
-		String normalizedEmail = email.trim().toLowerCase();
-		EmailValidator emailValidator = EmailValidator.getInstance();
-
-		if (!emailValidator.isValid(normalizedEmail)) {
-			throw new AccountInvalidEmailFormatException(normalizedEmail);
-		}
-
-		return normalizedEmail;
+		return emailValidator.validateEmailFormatAndNormalize(email);
 	}
 
 	private void validateEmailUniqueness(String email) {
