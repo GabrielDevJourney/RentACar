@@ -9,6 +9,7 @@ import java.util.List;
 @Repository
 public interface AccountRepository extends JpaRepository<AccountEntity,Long> {
 	boolean existsByEmail(String email);
+	boolean existsByPhoneNumber(String phoneNumber);
 
 	List<AccountEntity> findByActiveIsFalse();
 
