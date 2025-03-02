@@ -4,6 +4,6 @@ import com.gabriel.rentacar.exception.ResourceNotFoundException;
 
 public class RentalNotFoundException extends ResourceNotFoundException {
 	public RentalNotFoundException(Long id) {
-		super("Rental not found with id: " + id);
+		super(String.format("Rental not found with ID: %d ",id));
 	}
 }

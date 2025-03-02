@@ -4,6 +4,7 @@ import com.gabriel.rentacar.exception.ValidationException;
 
 public class VehicleNotValidYearOfManufacture extends ValidationException {
 	public VehicleNotValidYearOfManufacture(int vehicleYear,int minYear, int maxYear) {
-		super(vehicleYear + " is not a valid year", "Please insert a valid year between " + minYear + " and " + maxYear);
+		super(String.format(vehicleYear + "$d is not a valid year" , vehicleYear),
+				String.format("Please insert a valid year between %d and %d",minYear,maxYear));
 	}
 }

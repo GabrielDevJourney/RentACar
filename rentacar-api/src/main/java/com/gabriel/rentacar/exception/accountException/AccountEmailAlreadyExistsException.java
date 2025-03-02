@@ -4,6 +4,6 @@ import com.gabriel.rentacar.exception.ValidationException;
 
 public class AccountEmailAlreadyExistsException extends ValidationException {
 	public AccountEmailAlreadyExistsException(String email) {
-		super("Email already exists: " + email,"Invalid email!");
+		super(String.format("Email already exists: %s ", email),"Invalid email!");
 	}
 }
