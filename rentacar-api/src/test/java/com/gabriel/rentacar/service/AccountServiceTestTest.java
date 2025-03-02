@@ -8,6 +8,8 @@ import com.gabriel.rentacar.mapper.AccountMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AccountServiceTest {
+class AccountServiceTestTest {
 
 	@Mock
 	AccountRepository accountRepository;
@@ -31,12 +33,22 @@ class AccountServiceTest {
 
 	Long accountId = 1L;
 
+	AccountDto accountDtoTest = new AccountDto("gabriel", "pereira", "gabi@gmail.com", "915547852", 20);
+	AccountEntity accountEntityTest = new AccountEntity(1L, "gabriel", "pereira", false, "gabi@gmail.com", "915547852", 20);
+	AccountEntity accountEntityTestActiveTrue = new AccountEntity(1L, "gabriel", "pereira", true, "gabi@gmail.com",
+			"915547852", 20);
+
+
+	private void mockAccountLookup(AccountEntity account) {
+		when(accountRepository.findById(account.getId())).thenReturn(Optional.of(account));
+	}
+
+
+
 	// Tests for createAccount
 	@Test
 	void when_CreatingAccount_then_Success() {
 		//Setup
-		AccountDto accountDtoTest = new AccountDto("gabriel", "pereira", "gabi@gmail.com", "915547852", 20);
-		AccountEntity accountEntityTest = new AccountEntity(1L, "gabriel", "pereira", false, "gabi@gmail.com", "915547852", 20);
 		String email = accountDtoTest.getEmail();
 
 		when(accountRepository.existsByEmail(email)).thenReturn(false);
@@ -49,19 +61,18 @@ class AccountServiceTest {
 		verify(accountRepository).existsByEmail(email);
 		verify(accountMapper).toEntity(accountDtoTest);
 		verify(accountRepository).save(accountEntityTest);
-    
+
 	}
 
 	@Test
 	void when_CreatingAccount_with_ExistingEmail_then_ThrowsException() {
 		//Setup
-		AccountDto existsEmailDto = new AccountDto("gabriel", "pereira", "gabi@gmail.com", "945547852", 20);
-		String existsEmail = existsEmailDto.getEmail();
+		String existsEmail = accountDtoTest.getEmail();
 		when(accountRepository.existsByEmail(existsEmail)).thenReturn(true);
 
 		//Act
 		assertThrows(AccountEmailAlreadyExistsException.class, () -> {
-			accountService.createAccount(existsEmailDto);
+			accountService.createAccount(accountDtoTest);
 		});
 
 		//Assert
@@ -70,48 +81,104 @@ class AccountServiceTest {
 		verify(accountRepository, never()).save(any());
 	}
 
-	@Test
-	void when_CreatingAccount_with_InvalidNumber_then_ThrowsException() {
-		//Setup
-		AccountDto invalidPhoneDto = new AccountDto(
-				"Test", "User", "test@example.com", "945557852", 25
+	@ParameterizedTest
+	@ValueSource(strings = {"", " ", "a", "x "})
+	void when_CreatingAccount_with_InvalidFirstName_then_ThrowsException(String invalidFirstName) {
+		// Setup
+		AccountDto invalidFirstNameDto = accountDtoTest;
+		invalidFirstNameDto.setFirstName(invalidFirstName);
+
+		// Act & Assert
+		assertThrows(
+				AccountInvalidNameFormat.class,
+				() -> accountService.createAccount(invalidFirstNameDto)
 		);
-		when(accountRepository.existsByEmail(invalidPhoneDto.getEmail())).thenReturn(false);
-
-		//Act
-		assertThrows(AccountInvalidNumberException.class, () -> {
-			accountService.createAccount(invalidPhoneDto);
-		});
-
-		//Assert
-		verify(accountRepository).existsByEmail(anyString());
-		verify(accountRepository, never()).save(any());
 	}
 
-	@Test
-	void when_CreatingAccount_with_InvalidAge_then_ThrowsException() {
-		//Setup
-		AccountDto invalidAgeDto = new AccountDto(
-				"Test", "User", "test@example.com", "912345678", 15 //below 18
+	// Last Name Validation
+	@ParameterizedTest
+	@ValueSource(strings = {"", " ", "b", "y "})
+	void when_CreatingAccount_with_InvalidLastName_then_ThrowsException(String invalidLastName) {
+		// Setup
+		AccountDto invalidLastNameDto = accountDtoTest;
+		invalidLastNameDto.setLastName(invalidLastName);
+
+		// Act & Assert
+		assertThrows(
+				AccountInvalidNameFormat.class,
+				() -> accountService.createAccount(invalidLastNameDto)
 		);
+	}
+
+	// Email Validation
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"invalid.email",           // Missing @ symbol
+			"@missingusername.com",    // No username before @
+			"username@",               // No domain after @
+			"username@domain",          // No top-level domain
+			"user name@domain.com",    // Space in username
+			"username@domain..com",    // Double dots in domain
+			"username@-domain.com",    // Invalid domain start
+			"username@domain.com-",    // Invalid domain end
+			"username@domain.c",       // Too short top-level domain
+			"username@domain.toolongdomainextension"  // Too long top-level domain
+	})
+	void when_CreatingAccount_with_InvalidEmailFormat_then_ThrowsException(String invalidEmail) {
+		// Setup
+		AccountDto invalidEmailFormatDto = accountDtoTest;
+		invalidEmailFormatDto.setEmail(invalidEmail);
+
+		// Act & Assert
+		assertThrows(
+				AccountInvalidEmailFormatException.class,
+				() -> accountService.createAccount(invalidEmailFormatDto)
+		);
+	}
+
+	// Phone Number Validation
+	@ParameterizedTest
+	@ValueSource(strings = {
+			"123",
+			"12345",
+			"abc123456",
+			"91234",
+			"912345678901"
+	})
+	void when_CreatingAccount_with_InvalidPhoneNumber_then_ThrowsException(String invalidPhoneNumber) {
+		// Setup
+		AccountDto invalidPhoneNumberDto = accountDtoTest;
+		invalidPhoneNumberDto.setPhoneNumber(invalidPhoneNumber);
+		when(accountRepository.existsByEmail(invalidPhoneNumberDto.getEmail())).thenReturn(false);
+
+		// Act & Assert
+		assertThrows(
+				AccountInvalidNumberException.class,
+				() -> accountService.createAccount(invalidPhoneNumberDto)
+		);
+	}
+
+	// Age Validation
+	@ParameterizedTest
+	@ValueSource(ints = {17, 100, 101, 0, -1})
+	void when_CreatingAccount_with_InvalidAge_then_ThrowsException(int invalidAge) {
+		// Setup
+		AccountDto invalidAgeDto = accountDtoTest;
+		invalidAgeDto.setAge(invalidAge);
 		when(accountRepository.existsByEmail(invalidAgeDto.getEmail())).thenReturn(false);
 
-		//Act
-		assertThrows(AccountInvalidAgeException.class, () -> {
-			accountService.createAccount(invalidAgeDto);
-		});
-
-		//Assert
-		verify(accountRepository).existsByEmail(anyString());
-		verify(accountRepository, never()).save(any());
+		// Act & Assert
+		assertThrows(
+				AccountInvalidAgeException.class,
+				() -> accountService.createAccount(invalidAgeDto)
+		);
 	}
+
 
 	// Tests for activateAccount
 	@Test
 	void when_ActivatingAccount_then_Success(){
 		//Setup
-		AccountEntity accountEntityTest = new AccountEntity(accountId,"test","demo",false,"testdemo@gmail.com",
-				"915547852",20);
 		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
 
 		//Act
@@ -126,8 +193,6 @@ class AccountServiceTest {
 	void when_ActivatingAccount_with_NotFoundAccount_then_ThrowsException(){
 		//Setup
 		Long idToFailTest = 2L;
-		AccountEntity accountEntityTest = new AccountEntity(1L,"test","demo",false,"testdemo@gmail.com",
-				"915547852",20);
 		when(accountRepository.findById(idToFailTest)).thenReturn(Optional.empty());
 
 		//Assert within act
@@ -140,11 +205,8 @@ class AccountServiceTest {
 	@Test
 	void when_ActivatingAccount_with_AlreadyActiveAccount_then_ThrowsException(){
 		//Setup
-		Long accountId = 2L;
-		AccountEntity accountEntityTest = new AccountEntity(accountId,"test","demo",true,"testdemo@gmail.com",
-				"915547852",20);
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		//Assert within act
 		assertThrows(AccountAlreadyActiveException.class, () -> {
@@ -158,25 +220,21 @@ class AccountServiceTest {
 	@Test
 	void when_DeactivatingAccount_then_Success(){
 		//Setup
-		AccountEntity accountEntityTest = new AccountEntity(accountId,"test","demo",true,"testdemo@gmail.com",
-				"915547852",20);
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		//Act
 		accountService.deactivateAccount(accountId);
 
 		//Assert
-		assertFalse(accountEntityTest.isActive());
-		verify(accountRepository).save(accountEntityTest);
+		assertFalse(accountEntityTestActiveTrue.isActive());
+		verify(accountRepository).save(accountEntityTestActiveTrue);
 	}
 
 	@Test
 	void when_DeactivatingAccount_with_NotFoundAccount_then_ThrowsException(){
 		//Setup
 		Long idToFailTest = 2L;
-		AccountEntity accountEntityTest = new AccountEntity(1L,"test","demo",true,"testdemo@gmail.com",
-				"915547852",20);
 
 		when(accountRepository.findById(idToFailTest)).thenReturn(Optional.empty());
 
@@ -190,11 +248,6 @@ class AccountServiceTest {
 
 	@Test
 	void when_DeactivatingAccount_with_AlreadyDeactivatedAccount_then_ThrowsException(){
-		//Setup
-		Long accountId = 2L;
-		AccountEntity accountEntityTest = new AccountEntity(accountId,"test","demo",false,"testdemo@gmail.com",
-				"915547852",20);
-
 		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
 
 		//Assert within act
@@ -208,10 +261,6 @@ class AccountServiceTest {
 	// Tests for deleteAccount
 	@Test
 	void when_DeletingAccount_then_Success(){
-		//Setup
-		AccountEntity accountEntityTest = new AccountEntity(accountId,"test","demo",true,"testdemo@gmail.com",
-				"915547852",20);
-
 		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
 
 		//Act
@@ -224,8 +273,6 @@ class AccountServiceTest {
 	@Test
 	void when_DeletingAccount_with_AccountNotFound_then_ThrowsException(){
 		Long idToFailTest = 1L;
-		AccountEntity accountEntityTest = new AccountEntity(2L,"test","demo",true,"testdemo@gmail.com",
-				"915547852",20);
 
 		when(accountRepository.findById(idToFailTest)).thenReturn(Optional.empty());
 
@@ -240,19 +287,17 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingFirstNameAndLastName_then_Success() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "OldFirst", "OldLast", true, "test@example.com", "915547852", 25);
 		FirstLastNameDto firstLastNameDtoUpdate = new FirstLastNameDto("NewFirst", "NewLast");
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act
 		accountService.updateFirstNameAndLastName(accountId, firstLastNameDtoUpdate);
 
 		// Assert
-		assertEquals("NewFirst", accountEntityTest.getFirstName());
-		assertEquals("NewLast", accountEntityTest.getLastName());
-		verify(accountRepository).save(accountEntityTest);
+		assertEquals("NewFirst", accountEntityTestActiveTrue.getFirstName());
+		assertEquals("NewLast", accountEntityTestActiveTrue.getLastName());
+		verify(accountRepository).save(accountEntityTestActiveTrue);
 	}
 
 	@Test
@@ -312,18 +357,16 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingAccountAge_then_Success() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "test@example.com", "915547852", 25);
 		Integer newAge = 35;
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act
 		accountService.updateAccountAge(accountId, newAge);
 
 		// Assert
-		assertEquals(newAge, accountEntityTest.getAge());
-		verify(accountRepository).save(accountEntityTest);
+		assertEquals(newAge, accountEntityTestActiveTrue.getAge());
+		verify(accountRepository).save(accountEntityTestActiveTrue);
 	}
 
 	@Test
@@ -344,11 +387,9 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingAccountAge_with_InvalidAge_then_ThrowsException() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "test@example.com", "915547852", 25);
 		Integer invalidAge = 15; // Below minimum
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act & Assert
 		assertThrows(AccountInvalidAgeException.class, () -> {
@@ -362,19 +403,16 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingAccountEmail_then_Success() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "old@example.com", "915547852", 25);
 		String newEmail = "new@example.com";
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
-		when(accountRepository.existsByEmail(newEmail)).thenReturn(false);
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act
 		accountService.updateAccountEmail(accountId, newEmail);
 
 		// Assert
-		assertEquals(newEmail, accountEntityTest.getEmail());
-		verify(accountRepository).save(accountEntityTest);
+		assertEquals(newEmail, accountEntityTestActiveTrue.getEmail());
+		verify(accountRepository).save(accountEntityTestActiveTrue);
 	}
 
 	@Test
@@ -395,37 +433,35 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingAccountEmail_with_ExistingEmail_then_ThrowsException() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "old@example.com", "915547852", 25);
-		String existingEmail = "existing@example.com";
+		String newEmail = accountEntityTestActiveTrue.getEmail();
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
-		when(accountRepository.existsByEmail(existingEmail)).thenReturn(true);
+		mockAccountLookup(accountEntityTestActiveTrue);
+		when(accountRepository.existsByEmail(newEmail)).thenReturn(true);
 
 		// Act & Assert
 		assertThrows(AccountEmailAlreadyExistsException.class, () -> {
-			accountService.updateAccountEmail(accountId, existingEmail);
+			accountService.updateAccountEmail(accountId, newEmail);
 		});
 
+		verify(accountRepository).findById(accountId);
+		verify(accountRepository).existsByEmail(newEmail);
 		verify(accountRepository, never()).save(any());
 	}
 
 	// Tests for updateAccountPhoneNumber
 	@Test
 	void when_UpdatingAccountPhoneNumber_then_Success() {
-		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "test@example.com", "915547852", 25);
+		//Setup
 		String newPhoneNumber = "965547852";
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act
 		accountService.updateAccountPhoneNumber(accountId, newPhoneNumber);
 
 		// Assert
-		assertEquals(newPhoneNumber, accountEntityTest.getPhoneNumber());
-		verify(accountRepository).save(accountEntityTest);
+		assertEquals(newPhoneNumber, accountEntityTestActiveTrue.getPhoneNumber());
+		verify(accountRepository).save(accountEntityTestActiveTrue);
 	}
 
 	@Test
@@ -446,11 +482,9 @@ class AccountServiceTest {
 	@Test
 	void when_UpdatingAccountPhoneNumber_with_InvalidNumber_then_ThrowsException() {
 		// Setup
-		AccountEntity accountEntityTest = new AccountEntity(
-				accountId, "Test", "User", true, "test@example.com", "915547852", 25);
 		String invalidPhoneNumber = "12345678"; // Invalid format
 
-		when(accountRepository.findById(accountId)).thenReturn(Optional.of(accountEntityTest));
+		mockAccountLookup(accountEntityTestActiveTrue);
 
 		// Act & Assert
 		assertThrows(AccountInvalidNumberException.class, () -> {
