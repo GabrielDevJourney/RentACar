@@ -183,7 +183,7 @@ public class AccountService {
 	}
 
 	private boolean existsByEmail(String email) {
-		return accountRepository.existsByEmailIgnoreCase(email);
+		return accountRepository.existsByEmail(email);
 	}
 
 	private boolean existsByPhoneNumber(String phoneNumber) {
