@@ -7,7 +7,6 @@ import com.gabriel.rentacar.exception.accountException.*;
 import com.gabriel.rentacar.mapper.AccountMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
 import com.gabriel.rentacar.utils.EmailValidation;
-import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -95,16 +94,17 @@ public class AccountService {
 
 		String accountEmail = validateEmailFormatAndNormalize(accountDto.getEmail());
 
-		//email exists but belongs to a different account
-		if (!accountEmail.equalsIgnoreCase(accountEntity.getEmail()) && existsByEmail(accountEmail)) {
+		//email exists or belongs to a different account
+		if (accountEmail.equalsIgnoreCase(accountEntity.getEmail()) && existsByEmail(accountEmail)) {
 			throw new AccountEmailAlreadyExistsException(accountEmail);
 		}
 
 		Integer age = validateAge(accountDto.getAge(), accountEmail);
 
 		String phoneNumber = validatePhoneNumberFormat(accountDto.getPhoneNumber());
-		//phone exists but belongs to a different account
-		if (!phoneNumber.equals(accountEntity.getPhoneNumber()) && existsByPhoneNumber(phoneNumber)) {
+
+		//phone exists or belongs to a different account
+		if (phoneNumber.equals(accountEntity.getPhoneNumber()) && existsByPhoneNumber(phoneNumber)) {
 			throw new AccountPhoneNumberAlreadyExistsException(phoneNumber);
 		}
 
