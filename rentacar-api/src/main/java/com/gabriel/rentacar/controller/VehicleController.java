@@ -6,7 +6,6 @@ import com.gabriel.rentacar.service.VehicleService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,12 +18,7 @@ public class VehicleController {
 	}
 
 	@PostMapping
-	public ResponseEntity<Void> createVehicle(@Valid @RequestBody VehicleDto vehicleDto, BindingResult bindingResult) {
-
-		if(bindingResult.hasErrors()){
-			return ResponseEntity.badRequest().build();
-		}
-
+	public ResponseEntity<Void> createVehicle(@Valid @RequestBody VehicleDto vehicleDto) {
 		vehicleService.createVehicle(vehicleDto);
 		return ResponseEntity.ok().build();
 	}
