@@ -6,6 +6,7 @@ import com.gabriel.rentacar.enums.VehicleStatus;
 import com.gabriel.rentacar.exception.vehicleException.*;
 import com.gabriel.rentacar.mapper.VehicleMapper;
 import com.gabriel.rentacar.repository.VehicleRepository;
+import com.gabriel.rentacar.utils.PlateValidation;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -18,32 +19,26 @@ import java.util.Optional;
 public class VehicleService {
 	private final VehicleRepository vehicleRepository;
 	private final VehicleMapper vehicleMapper;
+	private final PlateValidation plateValidator;
 
 	public VehicleService(VehicleRepository vehicleRepository,
-	                      VehicleMapper vehicleMapper) {
+	                      VehicleMapper vehicleMapper, PlateValidation plateValidator) {
 		this.vehicleRepository = vehicleRepository;
 		this.vehicleMapper = vehicleMapper;
-	}
-
-	public void save(VehicleDto vehicleDto) {
-		vehicleRepository.save(vehicleMapper.toEntity(vehicleDto));
-	}
-
-	public Optional<VehicleDto> findById(Long id) {
-		return vehicleRepository.findById(id)
-				.map(vehicleMapper::toDto);
-	}
-
-	public List<VehicleDto> findAll() {
-		return vehicleMapper.toDtoList(vehicleRepository.findAll());
+		this.plateValidator = plateValidator;
 	}
 
 	public void createVehicle(VehicleDto vehicleDto) {
 		String plate = vehicleDto.getPlate();
-		if (vehicleRepository.existsByPlate(plate)) {
-			throw new VehicleLicensePlateAlreadyExistsException(plate);
+		int yearOfManufacture = vehicleDto.getYearManufacture();
+
+		String normalizedPlate = plateValidator.validatePlateFormat(plate,yearOfManufacture);
+
+		if (vehicleRepository.existsByPlate(normalizedPlate)) {
+			throw new VehicleLicensePlateAlreadyExistsException(normalizedPlate);
 		}
-		checkYearOfManufacture(vehicleDto.getYearManufacture());
+		checkYearOfManufacture(yearOfManufacture);
+		normalizeVehicleData(vehicleDto);
 
 		save(vehicleDto);
 	}
@@ -79,8 +74,19 @@ public class VehicleService {
 	}
 
 
-	//* HELPERS METHODS
+	//* HELPERS PUBLIC METHODS
+	public void save(VehicleDto vehicleDto) {
+		vehicleRepository.save(vehicleMapper.toEntity(vehicleDto));
+	}
 
+	public Optional<VehicleDto> findById(Long id) {
+		return vehicleRepository.findById(id)
+				.map(vehicleMapper::toDto);
+	}
+
+	public List<VehicleDto> findAll() {
+		return vehicleMapper.toDtoList(vehicleRepository.findAll());
+	}
 	public void setVehicleStatusToRented(VehicleEntity vehicle){
 		if(vehicle.getStatus() != VehicleStatus.AVAILABLE){
 			throw new VehicleStatusAvailableToRentedException(vehicle.getId());
@@ -144,11 +150,29 @@ public class VehicleService {
 		vehicle.setStatus(VehicleStatus.AVAILABLE);
 	}
 
+	//helper private methods
+	
 	private void checkYearOfManufacture(int vehicleYear){
 		int maxYear = Year.now().getValue();
 		int minYear = maxYear - 20;
 		if(vehicleYear > maxYear || vehicleYear < minYear){
-			throw new VehicleNotValidYearOfManufacture(vehicleYear,minYear, maxYear);
+			throw new VehicleInvalidYearOfManufacture(vehicleYear,minYear, maxYear);
 		}
+	}
+
+	private VehicleDto normalizeVehicleData(VehicleDto vehicleDto) {
+		// easier storage normalizing to one case only for brand names and models
+		if (vehicleDto.getBrand() != null) {
+			vehicleDto.setBrand(vehicleDto.getBrand().trim().toUpperCase());
+		}
+
+		if (vehicleDto.getModel() != null) {
+			vehicleDto.setModel(vehicleDto.getModel().trim().toUpperCase());
+		}
+
+		if (vehicleDto.getColor() != null) {
+			vehicleDto.setColor(vehicleDto.getColor().trim().toLowerCase());
+		}
+		return vehicleDto;
 	}
 }
