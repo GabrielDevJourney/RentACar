@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
 
     logger.error("Request field validation failed. Details: {}", errorMessage);
     return ResponseEntity.badRequest()
-            .body("Please check your input data!");
+            .body(errorMessage); // Return the actual error messages
   }
 
   @ExceptionHandler(Exception.class)
