@@ -3,7 +3,9 @@ package com.gabriel.rentacar.utils;
 import com.gabriel.rentacar.exception.accountException.AccountInvalidDataException;
 import com.gabriel.rentacar.exception.accountException.AccountInvalidEmailFormatException;
 import org.apache.commons.validator.routines.EmailValidator;
+import org.springframework.stereotype.Component;
 
+@Component
 public class EmailValidation {
 
 	public String validateEmailFormatAndNormalize(String email) {
