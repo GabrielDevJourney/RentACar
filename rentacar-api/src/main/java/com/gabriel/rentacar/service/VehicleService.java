@@ -29,6 +29,7 @@ public class VehicleService {
 	}
 
 	public void createVehicle(VehicleDto vehicleDto) {
+		validateNotNull(vehicleDto, "vehicleDto");
 		String plate = vehicleDto.getPlate();
 		int yearOfManufacture = vehicleDto.getYearManufacture();
 
@@ -44,12 +45,18 @@ public class VehicleService {
 	}
 
 	public VehicleDto findByPlate(String plate) {
+		validateNotNull(plate, "plate");
+
 		return vehicleRepository.findByPlate(plate)
 				.map(vehicleMapper::toDto)
 				.orElse(null);
 	}
 
 	public void updateVehicleStatus(Long vehicleId, VehicleStatus newStatus) {
+
+		validateNotNull(vehicleId,"vehicle id");
+		validateNotNull(newStatus, "new vehicle status");
+
 		VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
 				.orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
@@ -73,6 +80,12 @@ public class VehicleService {
 		vehicleRepository.save(vehicle);
 	}
 
+	public VehicleDto getVehicleById(Long vehicleId){
+		VehicleEntity vehicleEntity = vehicleRepository.findById(vehicleId).orElseThrow(() -> {
+			throw new VehicleNotFoundException(vehicleId);
+		});
+		return vehicleMapper.toDto(vehicleEntity);
+	}
 
 	//* HELPERS PUBLIC METHODS
 	public void save(VehicleDto vehicleDto) {
@@ -117,7 +130,7 @@ public class VehicleService {
 	}
 
 	//check every day for vehicles that can be updated to available
-	@Scheduled(fixedRate = 86400000)
+	@Scheduled(fixedRate = 86400000)//milliseconds
 	public void updateMaintenanceVehicles() {
 		List<VehicleEntity> vehiclesInMaintenance = vehicleRepository.findAllByStatus(VehicleStatus.MAINTENANCE);
 		LocalDate today = LocalDate.now();
@@ -131,23 +144,18 @@ public class VehicleService {
 		}
 	}
 
-	public void checkAndScheduleMaintenanceIfNeeded(VehicleEntity vehicle, int startKilometers, int endKilometers) {
+	public void completeRental(VehicleEntity vehicle, int startKilometers, int endKilometers) {
 		int distanceTraveled = endKilometers - startKilometers;
+		vehicle.setCurrentKilometers(endKilometers);
 
 		if (distanceTraveled >= vehicle.getMaintenanceKilometers()) {
-			setVehicleStatusToMaintenance(vehicle);
-			vehicle.setCurrentKilometers(endKilometers);
+			vehicle.setStatus(VehicleStatus.MAINTENANCE);
+			vehicle.setMaintenanceEndDate(LocalDate.now().plusDays(2));
 		} else {
-			completeRentalAndStatusToAvailable(vehicle,endKilometers);
+			vehicle.setStatus(VehicleStatus.AVAILABLE);
 		}
 
 		vehicleRepository.save(vehicle);
-	}
-
-	public void completeRentalAndStatusToAvailable(VehicleEntity vehicle, int endKilometers) {
-
-		vehicle.setCurrentKilometers(endKilometers);
-		vehicle.setStatus(VehicleStatus.AVAILABLE);
 	}
 
 	//helper private methods
@@ -174,5 +182,11 @@ public class VehicleService {
 			vehicleDto.setColor(vehicleDto.getColor().trim().toLowerCase());
 		}
 		return vehicleDto;
+	}
+
+	private void validateNotNull(Object obj, String fieldName) {
+		if (obj == null) {
+			throw new VehicleInvalidDataException(fieldName, fieldName + " cannot be null");
+		}
 	}
 }

@@ -2,6 +2,7 @@ package com.gabriel.rentacar.controller;
 
 import com.gabriel.rentacar.dto.vehicle.VehicleDto;
 import com.gabriel.rentacar.enums.VehicleStatus;
+import com.gabriel.rentacar.exception.vehicleException.VehicleNotFoundException;
 import com.gabriel.rentacar.service.VehicleService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -38,10 +39,15 @@ public class VehicleController {
 		VehicleDto vehicle = vehicleService.findByPlate(plate);
 		return vehicle != null ? ResponseEntity.ok(vehicle) : ResponseEntity.notFound().build();
 	}
+	@GetMapping("/search/{vehicleId}")
+	public ResponseEntity<VehicleDto> getVehicleById(@PathVariable Long vehicleId) {
+		VehicleDto vehicle = vehicleService.getVehicleById(vehicleId);
+		return vehicle != null ? ResponseEntity.ok(vehicle) : ResponseEntity.notFound().build();
+	}
 
-	@GetMapping("/{id}/plate")
-	public ResponseEntity<String> getPlateById(@PathVariable Long id) {
-		VehicleDto vehicle = vehicleService.findById(id).orElseThrow(() -> new RuntimeException("No vehicle found!"));
+	@GetMapping("/{vehicleId}/plate")
+	public ResponseEntity<String> getPlateById(@PathVariable Long vehicleId) {
+		VehicleDto vehicle = vehicleService.findById(vehicleId).orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 		String plate = vehicle.getPlate();
 		return plate != null ? ResponseEntity.ok(plate) : ResponseEntity.notFound().build();
 	}
