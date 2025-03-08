@@ -37,6 +37,7 @@ public class EmailValidation {
 		}
 
 
+		//valid first and last char of each local and domain
 		char firstCharLocal = localPart.charAt(0);
 		char lastCharLocal = localPart.charAt(localPart.length() - 1);
 		if (isInvalidCharacter(firstCharLocal) || isInvalidCharacter(lastCharLocal)) {
