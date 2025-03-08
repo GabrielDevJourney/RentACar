@@ -50,13 +50,17 @@ public class RentalService {
 		vehicleService.setVehicleStatusToRented(vehicle);
 
 		RentalEntity rentalEntity = rentalMapper.toEntityRequest(rentalRequestDto);
+
+		rentalEntity.setAccountEntity(account);
+		rentalEntity.setVehicleEntity(vehicle);
+
 		rentalRepository.save(rentalEntity);
 	}
 
 	public void endRenting(Long id, int endKilometers) {
 		RentalEntity rent = rentalRepository.findByIdAndStatus(id, RentalStatus.ACTIVE);
 		if(rent == null){
-			throw new RentalNotFoundException(rent.getId());
+			throw new RentalNotFoundException(id);
 		}
 		VehicleEntity vehicle = rent.getVehicleEntity();
 		int startKilometers = rent.getStartKilometers();
@@ -65,7 +69,7 @@ public class RentalService {
 		rent.setDateReturn(LocalDate.now());
 		rent.setStatus(RentalStatus.COMPLETED);
 
-		vehicleService.checkAndScheduleMaintenanceIfNeeded(vehicle, startKilometers, endKilometers);
+		vehicleService.completeRental(vehicle,startKilometers,endKilometers);
 
 		rentalRepository.save(rent);
 	}

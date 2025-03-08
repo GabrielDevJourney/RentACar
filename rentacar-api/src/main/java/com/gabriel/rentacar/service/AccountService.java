@@ -24,7 +24,7 @@ public class AccountService {
 	//REST ENDPOINTS
 	public void createAccount(AccountDto accountDto) {
 
-		validateNotNull(accountDto, "account");
+		 validateNotNull(accountDto, "account");
 
 		validateName(accountDto.getFirstName(), "first name");
 		validateName(accountDto.getLastName(), "last name");

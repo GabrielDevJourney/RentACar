@@ -2,12 +2,14 @@ package com.gabriel.rentacar.controller;
 
 import com.gabriel.rentacar.dto.vehicle.VehicleDto;
 import com.gabriel.rentacar.enums.VehicleStatus;
+import com.gabriel.rentacar.exception.vehicleException.VehicleNotFoundException;
 import com.gabriel.rentacar.service.VehicleService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -19,12 +21,7 @@ public class VehicleController {
 	}
 
 	@PostMapping
-	public ResponseEntity<Void> createVehicle(@Valid @RequestBody VehicleDto vehicleDto, BindingResult bindingResult) {
-
-		if(bindingResult.hasErrors()){
-			return ResponseEntity.badRequest().build();
-		}
-
+	public ResponseEntity<Void> createVehicle(@Valid @RequestBody VehicleDto vehicleDto) {
 		vehicleService.createVehicle(vehicleDto);
 		return ResponseEntity.ok().build();
 	}
@@ -44,11 +41,22 @@ public class VehicleController {
 		VehicleDto vehicle = vehicleService.findByPlate(plate);
 		return vehicle != null ? ResponseEntity.ok(vehicle) : ResponseEntity.notFound().build();
 	}
+	@GetMapping("/search/{vehicleId}")
+	public ResponseEntity<VehicleDto> getVehicleById(@PathVariable Long vehicleId) {
+		VehicleDto vehicle = vehicleService.getVehicleById(vehicleId);
+		return vehicle != null ? ResponseEntity.ok(vehicle) : ResponseEntity.notFound().build();
+	}
 
-	@GetMapping("/{id}/plate")
-	public ResponseEntity<String> getPlateById(@PathVariable Long id) {
-		VehicleDto vehicle = vehicleService.findById(id).orElseThrow(() -> new RuntimeException("No vehicle found!"));
+	@GetMapping("/{vehicleId}/plate")
+	public ResponseEntity<String> getPlateById(@PathVariable Long vehicleId) {
+		VehicleDto vehicle = vehicleService.findById(vehicleId).orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 		String plate = vehicle.getPlate();
 		return plate != null ? ResponseEntity.ok(plate) : ResponseEntity.notFound().build();
 	}
+	@GetMapping
+	public ResponseEntity<List<VehicleDto>> getAllVehicles() {
+		List<VehicleDto> vehicleDtoList = vehicleService.getAllVehicles();
+		return ResponseEntity.ok(vehicleDtoList);
+	}
+
 }
