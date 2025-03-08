@@ -28,6 +28,7 @@ public class VehicleService {
 		this.plateValidator = plateValidator;
 	}
 
+	//* HTTP REQUESTS BUSINESS LOGIC
 	public void createVehicle(VehicleDto vehicleDto) {
 		validateNotNull(vehicleDto, "vehicleDto");
 		String plate = vehicleDto.getPlate();
@@ -60,6 +61,8 @@ public class VehicleService {
 		VehicleEntity vehicle = vehicleRepository.findById(vehicleId)
 				.orElseThrow(() -> new VehicleNotFoundException(vehicleId));
 
+		validateStatusTransition(vehicle.getStatus(), newStatus, vehicleId);
+
 		switch (newStatus) {
 			case MAINTENANCE:
 				setVehicleStatusToMaintenance(vehicle);
@@ -76,8 +79,6 @@ public class VehicleService {
 			default:
 				throw new VehicleInvalidStatusUpdateException(vehicleId,vehicle.getStatus(), newStatus);
 		}
-
-		vehicleRepository.save(vehicle);
 	}
 
 	public VehicleDto getVehicleById(Long vehicleId){
@@ -85,6 +86,10 @@ public class VehicleService {
 			throw new VehicleNotFoundException(vehicleId);
 		});
 		return vehicleMapper.toDto(vehicleEntity);
+	}
+
+	public List<VehicleDto> getAllVehicles(){
+		return vehicleMapper.toDtoList(vehicleRepository.findAll());
 	}
 
 	//* HELPERS PUBLIC METHODS
@@ -97,37 +102,46 @@ public class VehicleService {
 				.map(vehicleMapper::toDto);
 	}
 
-	public List<VehicleDto> findAll() {
-		return vehicleMapper.toDtoList(vehicleRepository.findAll());
-	}
-	public void setVehicleStatusToRented(VehicleEntity vehicle){
-		if(vehicle.getStatus() != VehicleStatus.AVAILABLE){
-			throw new VehicleStatusAvailableToRentedException(vehicle.getId());
-		}
+	//*UPDATE STATUS METHOD HELPERS
+
+	public void setVehicleStatusToRented(VehicleEntity vehicle) {
+		validateNotNull(vehicle, "vehicle");
+		validateStatusTransition(vehicle.getStatus(), VehicleStatus.RENTED, vehicle.getId());
+
 		vehicle.setStatus(VehicleStatus.RENTED);
 		vehicleRepository.save(vehicle);
 	}
 
-	public void setVehicleStatusToMaintenance(VehicleEntity vehicle){
-		if(vehicle.getStatus().equals(VehicleStatus.DISABLE) ){
-			throw new VehicleStatusDisableToMaintenanceException(vehicle.getId());
-		}
+	public void setVehicleStatusToMaintenance(VehicleEntity vehicle) {
+		validateNotNull(vehicle, "vehicle");
+		validateStatusTransition(vehicle.getStatus(), VehicleStatus.MAINTENANCE, vehicle.getId());
+
 		vehicle.setStatus(VehicleStatus.MAINTENANCE);
 		vehicle.setMaintenanceEndDate(LocalDate.now().plusDays(2));
+		vehicleRepository.save(vehicle);
 	}
 
-	public void setVehicleStatusToDisable(VehicleEntity vehicle){
-		if(vehicle.getStatus().equals(VehicleStatus.RENTED)){
-			throw new VehicleStatusRentedToDisableException(vehicle.getId());
-		}
+	public void setVehicleStatusToDisable(VehicleEntity vehicle) {
+		validateNotNull(vehicle, "vehicle");
+		validateStatusTransition(vehicle.getStatus(), VehicleStatus.DISABLE, vehicle.getId());
+
 		vehicle.setStatus(VehicleStatus.DISABLE);
+		vehicleRepository.save(vehicle);
 	}
-	public void setVehicleStatusToAvailable(VehicleEntity vehicle){
-		if(vehicle.getStatus().equals(VehicleStatus.RENTED)){
-			throw new VehicleInvalidStatusUpdateException(vehicle.getId(),vehicle.getStatus(), VehicleStatus.AVAILABLE);
-		}
+
+	public void setVehicleStatusToAvailable(VehicleEntity vehicle) {
+		validateNotNull(vehicle, "vehicle");
+		validateStatusTransition(vehicle.getStatus(), VehicleStatus.AVAILABLE, vehicle.getId());
+
 		vehicle.setStatus(VehicleStatus.AVAILABLE);
+
+		if (vehicle.getStatus() == VehicleStatus.MAINTENANCE) {
+			vehicle.setMaintenanceEndDate(null);
+		}
+
+		vehicleRepository.save(vehicle);
 	}
+
 
 	//check every day for vehicles that can be updated to available
 	@Scheduled(fixedRate = 86400000)//milliseconds
@@ -158,7 +172,7 @@ public class VehicleService {
 		vehicleRepository.save(vehicle);
 	}
 
-	//helper private methods
+	//* PRIVATE HELPER METHODS
 	
 	private void checkYearOfManufacture(int vehicleYear){
 		int maxYear = Year.now().getValue();
@@ -187,6 +201,44 @@ public class VehicleService {
 	private void validateNotNull(Object obj, String fieldName) {
 		if (obj == null) {
 			throw new VehicleInvalidDataException(fieldName, fieldName + " cannot be null");
+		}
+	}
+
+	private void validateStatusTransition(VehicleStatus currentStatus, VehicleStatus newStatus, Long vehicleId) {
+		if (currentStatus == newStatus) {
+			return; // No transition needed
+		}
+
+		// Define allowed transitions for each status
+		boolean isValid = false;
+
+		switch (currentStatus) {
+			case AVAILABLE:
+				isValid = (newStatus == VehicleStatus.RENTED ||
+						newStatus == VehicleStatus.MAINTENANCE ||
+						newStatus == VehicleStatus.DISABLE);
+				break;
+			case RENTED:
+				if (newStatus == VehicleStatus.DISABLE) {
+					throw new VehicleStatusRentedToDisableException(vehicleId);
+				}
+				isValid = (newStatus == VehicleStatus.AVAILABLE ||
+						newStatus == VehicleStatus.MAINTENANCE);
+				break;
+			case MAINTENANCE:
+				isValid = (newStatus == VehicleStatus.AVAILABLE ||
+						newStatus == VehicleStatus.DISABLE);
+				break;
+			case DISABLE:
+				if (newStatus == VehicleStatus.MAINTENANCE) {
+					throw new VehicleStatusDisableToMaintenanceException(vehicleId);
+				}
+				isValid = (newStatus == VehicleStatus.AVAILABLE);
+				break;
+		}
+
+		if (!isValid) {
+			throw new VehicleInvalidStatusUpdateException(vehicleId, currentStatus, newStatus);
 		}
 	}
 }

@@ -50,8 +50,10 @@ public class RentalService {
 		vehicleService.setVehicleStatusToRented(vehicle);
 
 		RentalEntity rentalEntity = rentalMapper.toEntityRequest(rentalRequestDto);
+
 		rentalEntity.setAccountEntity(account);
 		rentalEntity.setVehicleEntity(vehicle);
+
 		rentalRepository.save(rentalEntity);
 	}
 

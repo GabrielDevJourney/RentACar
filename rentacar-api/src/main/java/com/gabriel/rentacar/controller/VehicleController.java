@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/vehicles")
 public class VehicleController {
@@ -51,4 +53,10 @@ public class VehicleController {
 		String plate = vehicle.getPlate();
 		return plate != null ? ResponseEntity.ok(plate) : ResponseEntity.notFound().build();
 	}
+	@GetMapping
+	public ResponseEntity<List<VehicleDto>> getAllVehicles() {
+		List<VehicleDto> vehicleDtoList = vehicleService.getAllVehicles();
+		return ResponseEntity.ok(vehicleDtoList);
+	}
+
 }
