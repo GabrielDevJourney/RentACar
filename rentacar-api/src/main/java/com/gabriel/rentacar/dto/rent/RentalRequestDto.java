@@ -28,8 +28,4 @@ public class RentalRequestDto {
 	@NotNull(message = "End date is required")
 	@JsonFormat(pattern = "yyyy-MM-dd")
 	private LocalDate dateEnd;
-
-	@NotNull(message = "Start kilometers is required")
-	@Min(value = 0, message = "Start kilometers must be positive")
-	private int startKilometers;
 }
