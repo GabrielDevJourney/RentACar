@@ -47,12 +47,7 @@ public class RentalEntity {
 	@Min(value = 0, message = "Kilometers must be above start kilometers")
 	private int endKilometers;
 
-	@AssertTrue(message = "End date must be after start date")
-	private boolean isDateValid() {
-		if (dateEnd == null || dateStart == null) return true;
-		return dateEnd.isAfter(dateStart) || dateEnd.isEqual(dateStart);
-	}
-
+	//having also entity check for data persistence and double validation if bypassed by first layer
 	@AssertTrue(message = "End kilometers must be greater than start kilometers")
 	private boolean isKilometersValid() {
 		if (endKilometers == 0) return true;
