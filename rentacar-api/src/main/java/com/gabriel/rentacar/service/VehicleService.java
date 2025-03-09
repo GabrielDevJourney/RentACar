@@ -65,16 +65,16 @@ public class VehicleService {
 
 		switch (newStatus) {
 			case MAINTENANCE:
-				setVehicleStatusToMaintenance(vehicle);
+				updateVehicleStatusToMaintenance(vehicle);
 				break;
 			case DISABLE:
-				setVehicleStatusToDisable(vehicle);
+				updateVehicleStatusToDisable(vehicle);
 				break;
 			case AVAILABLE:
-				setVehicleStatusToAvailable(vehicle);
+				updateVehicleStatusToAvailable(vehicle);
 				break;
 			case RENTED:
-				setVehicleStatusToRented(vehicle);
+				updateVehicleStatusToRented(vehicle);
 				break;
 			default:
 				throw new VehicleInvalidStatusUpdateException(vehicleId,vehicle.getStatus(), newStatus);
@@ -104,7 +104,7 @@ public class VehicleService {
 
 	//*UPDATE STATUS METHOD HELPERS
 
-	public void setVehicleStatusToRented(VehicleEntity vehicle) {
+	public void updateVehicleStatusToRented(VehicleEntity vehicle) {
 		validateNotNull(vehicle, "vehicle");
 		validateStatusTransition(vehicle.getStatus(), VehicleStatus.RENTED, vehicle.getId());
 
@@ -112,7 +112,7 @@ public class VehicleService {
 		vehicleRepository.save(vehicle);
 	}
 
-	public void setVehicleStatusToMaintenance(VehicleEntity vehicle) {
+	public void updateVehicleStatusToMaintenance(VehicleEntity vehicle) {
 		validateNotNull(vehicle, "vehicle");
 		validateStatusTransition(vehicle.getStatus(), VehicleStatus.MAINTENANCE, vehicle.getId());
 
@@ -121,7 +121,7 @@ public class VehicleService {
 		vehicleRepository.save(vehicle);
 	}
 
-	public void setVehicleStatusToDisable(VehicleEntity vehicle) {
+	public void updateVehicleStatusToDisable(VehicleEntity vehicle) {
 		validateNotNull(vehicle, "vehicle");
 		validateStatusTransition(vehicle.getStatus(), VehicleStatus.DISABLE, vehicle.getId());
 
@@ -129,7 +129,7 @@ public class VehicleService {
 		vehicleRepository.save(vehicle);
 	}
 
-	public void setVehicleStatusToAvailable(VehicleEntity vehicle) {
+	public void updateVehicleStatusToAvailable(VehicleEntity vehicle) {
 		validateNotNull(vehicle, "vehicle");
 		validateStatusTransition(vehicle.getStatus(), VehicleStatus.AVAILABLE, vehicle.getId());
 
@@ -158,8 +158,8 @@ public class VehicleService {
 		}
 	}
 
-	public void completeRental(VehicleEntity vehicle, int startKilometers, int endKilometers) {
-		int distanceTraveled = endKilometers - startKilometers;
+	public void completeRental(VehicleEntity vehicle, int rentalStartKilometers, int endKilometers) {
+		int distanceTraveled = endKilometers - rentalStartKilometers;
 		vehicle.setCurrentKilometers(endKilometers);
 
 		if (distanceTraveled >= vehicle.getMaintenanceKilometers()) {
@@ -182,7 +182,7 @@ public class VehicleService {
 		}
 	}
 
-	private VehicleDto normalizeVehicleData(VehicleDto vehicleDto) {
+	private void normalizeVehicleData(VehicleDto vehicleDto) {
 		// easier storage normalizing to one case only for brand names and models
 		if (vehicleDto.getBrand() != null) {
 			vehicleDto.setBrand(vehicleDto.getBrand().trim().toUpperCase());
@@ -195,7 +195,6 @@ public class VehicleService {
 		if (vehicleDto.getColor() != null) {
 			vehicleDto.setColor(vehicleDto.getColor().trim().toLowerCase());
 		}
-		return vehicleDto;
 	}
 
 	private void validateNotNull(Object obj, String fieldName) {
@@ -209,33 +208,26 @@ public class VehicleService {
 			return; // No transition needed
 		}
 
-		// Define allowed transitions for each status
-		boolean isValid = false;
-
-		switch (currentStatus) {
-			case AVAILABLE:
-				isValid = (newStatus == VehicleStatus.RENTED ||
-						newStatus == VehicleStatus.MAINTENANCE ||
-						newStatus == VehicleStatus.DISABLE);
-				break;
-			case RENTED:
+		boolean isValid = switch (currentStatus) {
+			case AVAILABLE -> (newStatus == VehicleStatus.RENTED ||
+					newStatus == VehicleStatus.MAINTENANCE ||
+					newStatus == VehicleStatus.DISABLE);
+			case RENTED -> {
 				if (newStatus == VehicleStatus.DISABLE) {
 					throw new VehicleStatusRentedToDisableException(vehicleId);
 				}
-				isValid = (newStatus == VehicleStatus.AVAILABLE ||
+				yield (newStatus == VehicleStatus.AVAILABLE ||
 						newStatus == VehicleStatus.MAINTENANCE);
-				break;
-			case MAINTENANCE:
-				isValid = (newStatus == VehicleStatus.AVAILABLE ||
-						newStatus == VehicleStatus.DISABLE);
-				break;
-			case DISABLE:
+			}
+			case MAINTENANCE -> (newStatus == VehicleStatus.AVAILABLE ||
+					newStatus == VehicleStatus.DISABLE);
+			case DISABLE -> {
 				if (newStatus == VehicleStatus.MAINTENANCE) {
 					throw new VehicleStatusDisableToMaintenanceException(vehicleId);
 				}
-				isValid = (newStatus == VehicleStatus.AVAILABLE);
-				break;
-		}
+				yield (newStatus == VehicleStatus.AVAILABLE);
+			}
+		};
 
 		if (!isValid) {
 			throw new VehicleInvalidStatusUpdateException(vehicleId, currentStatus, newStatus);
