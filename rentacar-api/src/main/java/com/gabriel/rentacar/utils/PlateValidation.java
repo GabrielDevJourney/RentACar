@@ -88,12 +88,12 @@ public class PlateValidation {
 						"For vehicles after 2020, plate must be in AA-00-AA format"
 				);
 			}
-		} else if (yearManufacture >= 2005 && yearManufacture <= 2020) {
+		} else if (yearManufacture >= 2005) {
 			// 00-AA-00 format
 			if (!normalizedPlate.matches("^[0-9]{2}-[A-Z]{2}-[0-9]{2}$")) {
 				throw new VehicleInvalidPlateFormatException(
 						normalizedPlate,
-						"For vehicles from 2005-2020, plate must be in 00-AA-00 format"
+						"For vehicles after 2005, plate must be in 00-AA-00 format"
 				);
 			}
 		} else {

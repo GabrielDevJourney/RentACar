@@ -6,4 +6,7 @@ public class RentalInvalidRentingDatesException extends ValidationException {
 	public RentalInvalidRentingDatesException(String message) {
 		super(message,"Invalid dates for this renting");
 	}
+	public RentalInvalidRentingDatesException(String messageLog, String clientMessage){
+		super(messageLog,clientMessage);
+	}
 }

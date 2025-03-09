@@ -16,6 +16,7 @@ public interface RentalMapper {
 	@Mapping(target = "endKilometers", ignore = true)
 	@Mapping(target = "totalPrice", ignore = true)
 	@Mapping(target = "status", ignore = true)
+	@Mapping(target = "startKilometers", ignore = true)
 	RentalEntity toEntityRequest(RentalRequestDto dto);
 
 	@Mapping(target = "accountId", source = "accountEntity.id")
