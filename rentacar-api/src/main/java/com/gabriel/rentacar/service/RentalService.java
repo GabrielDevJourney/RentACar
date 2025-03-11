@@ -6,10 +6,10 @@ import com.gabriel.rentacar.entity.AccountEntity;
 import com.gabriel.rentacar.entity.RentalEntity;
 import com.gabriel.rentacar.entity.VehicleEntity;
 import com.gabriel.rentacar.enums.RentalStatus;
+import com.gabriel.rentacar.exception.accountException.AccountNotActiveException;
 import com.gabriel.rentacar.exception.accountException.AccountNotFoundException;
 import com.gabriel.rentacar.exception.rentalException.RentalInvalidReturningEndKilometersException;
 import com.gabriel.rentacar.exception.rentalException.RentalNotFoundException;
-import com.gabriel.rentacar.exception.rentalException.RentalOverlappingDatesException;
 import com.gabriel.rentacar.exception.vehicleException.VehicleNotFoundException;
 import com.gabriel.rentacar.mapper.RentalMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
@@ -51,6 +51,7 @@ public class RentalService {
 		AccountEntity account =
 				accountRepository.findById(accountId).orElseThrow(() -> new AccountNotFoundException(accountId));
 
+		validateAccountIsActive(account);
 
 		dateValidator.validateRentalDates(
 				rentalRequestDto.getVehicleId(),
@@ -175,6 +176,13 @@ public class RentalService {
 		if (returnKilometers <= rental.getStartKilometers()) {
 			throw new RentalInvalidReturningEndKilometersException(rental.getId());
 		}
+	}
+
+	private void validateAccountIsActive(AccountEntity account){
+		if(account.isActive()){
+			return;
+		}
+		throw new AccountNotActiveException(account.getId());
 	}
 
 }
