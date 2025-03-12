@@ -31,6 +31,12 @@ public class AccountDto {
 			message = "Email format is invalid")
 	private String email;
 
+	@NotBlank(message = "Password is required")
+	@Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
+	@Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",
+			message = "Password must contain at least one digit, one lowercase letter, one uppercase letter, and one special character")
+	private String password;
+
 	@NotBlank(message = "Must have phone number")
 	@Pattern(regexp = "^(91|92|93|96)\\d{7}$",
 			message = "Invalid phone number format. Expected format:91 or 92 or 93 or 96.")

@@ -7,6 +7,7 @@ import com.gabriel.rentacar.exception.accountException.*;
 import com.gabriel.rentacar.mapper.AccountMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
 import com.gabriel.rentacar.utils.EmailValidation;
+import com.gabriel.rentacar.utils.PasswordValidation;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,10 +16,12 @@ import java.util.List;
 public class AccountService {
 	private final AccountRepository accountRepository;
 	private final AccountMapper accountMapper;
+	private final PasswordValidation passwordValidator;
 
-	public AccountService(AccountRepository accountRepository, AccountMapper accountMapper) {
+	public AccountService(AccountRepository accountRepository, AccountMapper accountMapper,PasswordValidation passwordValidator) {
 		this.accountRepository = accountRepository;
 		this.accountMapper = accountMapper;
+		this.passwordValidator = passwordValidator;
 	}
 
 	//REST ENDPOINTS
@@ -32,6 +35,11 @@ public class AccountService {
 		String accountEmail = validateEmailFormatAndNormalize(accountDto.getEmail());
 		validateEmailUniqueness(accountEmail);
 
+		String passwordForValidation = accountDto.getPassword();
+		passwordValidator.validatePassword(passwordForValidation);
+
+		String passwordEncrypted = passwordValidator.encryptPassword(passwordForValidation);
+
 		Integer age = validateAge(accountDto.getAge(), accountEmail);
 
 		String phoneNumber = validatePhoneNumberFormat(accountDto.getPhoneNumber());
@@ -40,6 +48,7 @@ public class AccountService {
 		accountDto.setEmail(accountEmail);
 		accountDto.setAge(age);
 		accountDto.setPhoneNumber(phoneNumber);
+		accountDto.setPassword(passwordEncrypted);
 
 		save(accountDto);
 	}
