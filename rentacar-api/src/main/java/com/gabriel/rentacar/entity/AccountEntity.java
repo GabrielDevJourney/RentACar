@@ -32,6 +32,9 @@ public class AccountEntity {
 	@NotNull
 	private String email;
 
+	@Column(name = "password", nullable = false, length = 72)
+	private String password;
+
 	@Column(name = "phone", unique = true)
 	@NotNull
 	private String phoneNumber;
