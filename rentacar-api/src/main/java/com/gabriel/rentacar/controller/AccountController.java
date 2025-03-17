@@ -1,7 +1,9 @@
 package com.gabriel.rentacar.controller;
 
+import com.gabriel.rentacar.dto.account.AccountConfirmationDto;
 import com.gabriel.rentacar.dto.account.AccountDto;
 import com.gabriel.rentacar.dto.account.FirstLastNameDto;
+import com.gabriel.rentacar.entity.AccountEntity;
 import com.gabriel.rentacar.service.AccountService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -23,16 +25,10 @@ public class AccountController {
 		this.accountService = accountService;
 	}
 
-	@PostMapping
-	public ResponseEntity<Void> createAccount(@RequestBody AccountDto accountDto) {
-		accountService.createAccount(accountDto);
-		return ResponseEntity.ok().build();
-	}
-
-	@PatchMapping("/{id}/activate")
 	@Transactional
-	public ResponseEntity<Void> activateAccount(@PathVariable Long id) {
-		accountService.activateAccount(id);
+	@PatchMapping("/confirm")
+	public ResponseEntity<Void> confirmAccount(@RequestBody AccountConfirmationDto accountConfirmationDto) {
+		accountService.confirmAccount(accountConfirmationDto.getEmail(), accountConfirmationDto.getPassword());
 		return ResponseEntity.ok().build();
 	}
 
@@ -71,6 +67,7 @@ public class AccountController {
 		accountService.updateAccountPhoneNumber(id,phoneNumber);
 		return ResponseEntity.ok().build();
 	}
+
 
 	@PutMapping("/{id}")
 	@Transactional
