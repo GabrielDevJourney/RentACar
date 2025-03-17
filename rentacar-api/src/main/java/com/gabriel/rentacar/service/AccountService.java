@@ -3,11 +3,16 @@ package com.gabriel.rentacar.service;
 import com.gabriel.rentacar.dto.account.AccountDto;
 import com.gabriel.rentacar.dto.account.FirstLastNameDto;
 import com.gabriel.rentacar.entity.AccountEntity;
+import com.gabriel.rentacar.enums.UserRole;
+import com.gabriel.rentacar.exception.ValidationException;
 import com.gabriel.rentacar.exception.accountException.*;
 import com.gabriel.rentacar.mapper.AccountMapper;
 import com.gabriel.rentacar.repository.AccountRepository;
 import com.gabriel.rentacar.utils.EmailValidation;
 import com.gabriel.rentacar.utils.PasswordValidation;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,17 +22,19 @@ public class AccountService {
 	private final AccountRepository accountRepository;
 	private final AccountMapper accountMapper;
 	private final PasswordValidation passwordValidator;
+	private final static Logger logger = LoggerFactory.getLogger(AccountService.class);
 
-	public AccountService(AccountRepository accountRepository, AccountMapper accountMapper,PasswordValidation passwordValidator) {
+	public AccountService(AccountRepository accountRepository, AccountMapper accountMapper, PasswordValidation passwordValidator) {
 		this.accountRepository = accountRepository;
 		this.accountMapper = accountMapper;
 		this.passwordValidator = passwordValidator;
 	}
 
 	//REST ENDPOINTS
+	@Transactional
 	public void createAccount(AccountDto accountDto) {
 
-		 validateNotNull(accountDto, "account");
+		validateNotNull(accountDto, "account");
 
 		validateName(accountDto.getFirstName(), "first name");
 		validateName(accountDto.getLastName(), "last name");
@@ -50,17 +57,34 @@ public class AccountService {
 		accountDto.setPhoneNumber(phoneNumber);
 		accountDto.setPassword(passwordEncrypted);
 
-		save(accountDto);
-	}
+		AccountEntity accountEntity = accountMapper.toEntity(accountDto);
 
-	public void activateAccount(Long id) {
-		AccountEntity account = getAccountEntityById(id);
-
-		if (account.isActive()) {
-			throw new AccountAlreadyActiveException(id);
+		//for jwt generate token be able to get role based on email
+		if (accountDto.getEmail().contains("admin")) {
+			accountEntity.setUserRole(UserRole.ADMIN);
+		} else if (accountDto.getEmail().contains("manager")) {
+			accountEntity.setUserRole(UserRole.MANAGER);
+		} else {
+			accountEntity.setUserRole(UserRole.USER);
 		}
 
-		account.setActive(true);
+		accountRepository.save(accountEntity);
+	}
+
+	public void confirmAccount(String email, String password) {
+		AccountEntity account = accountRepository.findByEmail(email).orElseThrow(() -> new ValidationException("Not " +
+				"account found", "Account not found"));
+
+		if (passwordValidator.matches(password, account.getPassword())) {
+			if (account.isActive()) {
+				throw new AccountAlreadyActiveException(account.getId());
+			} else {
+				account.setActive(true);
+			}
+		}else{
+			throw new AccountInvalidPasswordException("Passwords don't match at confirmation");
+		}
+
 		accountRepository.save(account);
 	}
 
@@ -160,6 +184,7 @@ public class AccountService {
 		accountRepository.save(accountEntity);
 	}
 
+
 	public AccountDto getAccountDtoById(Long id) {
 		return accountMapper.toDto(getAccountEntityById(id));
 	}
@@ -189,6 +214,7 @@ public class AccountService {
 	// repo helper methods
 	private void save(AccountDto accountDto) {
 		accountRepository.save(accountMapper.toEntity(accountDto));
+
 	}
 
 	private boolean existsByEmail(String email) {
