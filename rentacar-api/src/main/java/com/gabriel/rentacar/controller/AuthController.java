@@ -1,5 +1,6 @@
 package com.gabriel.rentacar.controller;
 
+import com.gabriel.rentacar.dto.account.AccountDto;
 import com.gabriel.rentacar.dto.auth.AuthRequestDto;
 import com.gabriel.rentacar.dto.auth.AuthResponseDto;
 import com.gabriel.rentacar.dto.auth.ChangePasswordDto;
@@ -16,6 +17,13 @@ public class AuthController {
 
 	public AuthController(AuthService authService) {
 		this.authService = authService;
+	}
+
+	@PostMapping("/register")
+	public ResponseEntity<Void> register(@Valid @RequestBody AccountDto accountDto) {
+	authService.registerAccount(accountDto);
+
+		return ResponseEntity.ok().build();
 	}
 
 	@PostMapping("/login")
