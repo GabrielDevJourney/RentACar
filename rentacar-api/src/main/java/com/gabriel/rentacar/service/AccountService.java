@@ -3,6 +3,7 @@ package com.gabriel.rentacar.service;
 import com.gabriel.rentacar.dto.account.AccountDto;
 import com.gabriel.rentacar.dto.account.FirstLastNameDto;
 import com.gabriel.rentacar.entity.AccountEntity;
+import com.gabriel.rentacar.enums.UserRole;
 import com.gabriel.rentacar.exception.ValidationException;
 import com.gabriel.rentacar.exception.accountException.*;
 import com.gabriel.rentacar.mapper.AccountMapper;
@@ -56,7 +57,18 @@ public class AccountService {
 		accountDto.setPhoneNumber(phoneNumber);
 		accountDto.setPassword(passwordEncrypted);
 
-		save(accountDto);
+		AccountEntity accountEntity = accountMapper.toEntity(accountDto);
+
+		//for jwt generate token be able to get role based on email
+		if (accountDto.getEmail().contains("admin")) {
+			accountEntity.setUserRole(UserRole.ADMIN);
+		} else if (accountDto.getEmail().contains("manager")) {
+			accountEntity.setUserRole(UserRole.MANAGER);
+		} else {
+			accountEntity.setUserRole(UserRole.USER);
+		}
+
+		accountRepository.save(accountEntity);
 	}
 
 	public void confirmAccount(String email, String password) {

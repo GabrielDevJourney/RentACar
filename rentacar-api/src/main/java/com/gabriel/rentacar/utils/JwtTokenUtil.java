@@ -11,10 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 @Component
@@ -29,10 +26,10 @@ public class JwtTokenUtil {
 	private static final Logger logger = LoggerFactory.getLogger(JwtTokenUtil.class);
 
 	// Generate token for user
-	public String generateToken(String email) {
+	public String generateToken(String email, List<String> roles) {
 		logger.info("Generating token for user: {}", email);
 		Map<String, Object> claims = new HashMap<>();
-		claims.put("roles", List.of("USER"));
+		claims.put("roles", roles);
 		return createToken(claims, email);
 	}
 
@@ -67,9 +64,14 @@ public class JwtTokenUtil {
 
 	//Extract roles from token
 	public List<String> extractRoles(String token) {
-		List<String> roles = extractClaim(token, claims -> claims.get("roles", List.class));
-		logger.debug("Extracted roles from token: {}", roles);
-		return roles;
+		try {
+			Claims claims = extractAllClaims(token);
+			List<String> roles = claims.get("roles", List.class);
+			return roles != null ? roles : Collections.emptyList();
+		} catch (Exception e) {
+			logger.error("Error extracting roles from token", e);
+			return Collections.emptyList();
+		}
 	}
 
 	// Extract expiration date from token

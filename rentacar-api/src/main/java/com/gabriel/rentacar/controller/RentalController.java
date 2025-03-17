@@ -7,6 +7,7 @@ import com.gabriel.rentacar.service.RentalService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ public class RentalController {
 		this.rentalService = rentalService;
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@PostMapping
 	public ResponseEntity<Void> createRenting(@Valid @RequestBody RentalRequestDto rentalRequestDto, BindingResult bindingResult) {
 		if (bindingResult.hasErrors()) {
@@ -31,6 +33,7 @@ public class RentalController {
 	}
 
 	//todo change this to be a patch
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@Transactional
 	@PutMapping("/return/{id}/{endKilometers}")
 	public ResponseEntity<Void> endRenting(@PathVariable Long id, @PathVariable int endKilometers){
@@ -38,24 +41,28 @@ public class RentalController {
 		return ResponseEntity.ok().build();
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/{id}")
 	public ResponseEntity<RentalResponseDto> getRentingInfo(@PathVariable Long id){
 		RentalResponseDto rentalResponseDto = rentalService.getRentingInfo(id);
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/vehicle/{id}")
 	public ResponseEntity<RentalResponseDto> getRentingInfoByVehicleId(@PathVariable Long id){
 		RentalResponseDto rentalResponseDto = rentalService.getRentingInfoByVehicleId(id);
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/account/{id}")
 	public ResponseEntity<RentalResponseDto> getRentingInfoByAccountId(@PathVariable Long id){
 		RentalResponseDto rentalResponseDto = rentalService.getRentingInfoByAccountId(id);
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/vehicle/{id}/{status}")
 	public ResponseEntity<RentalResponseDto> getRentingInfoByVehicleIdAndStatus(@PathVariable Long id,
 	                                                                            @PathVariable RentalStatus status){
@@ -66,6 +73,7 @@ public class RentalController {
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/account/{id}/{status}")
 	public ResponseEntity<RentalResponseDto> getRentingInfoByAccountIdAndStatus(@PathVariable Long id,
 	                                                                            @PathVariable RentalStatus status){
@@ -76,6 +84,7 @@ public class RentalController {
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/account/all/{id}")
 	public ResponseEntity<List<RentalResponseDto>> getRentalsOfAccount(@PathVariable Long id){
 		List<RentalResponseDto> rentalResponseDto = rentalService.getAllRentalsForAccount(id);
@@ -85,6 +94,7 @@ public class RentalController {
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/vehicle/all/{id}")
 	public ResponseEntity<List<RentalResponseDto>> getRentalsOfVehicle(@PathVariable Long id){
 		List<RentalResponseDto> rentalResponseDto = rentalService.getAllRentalsForVehicle(id);
@@ -94,6 +104,7 @@ public class RentalController {
 		return ResponseEntity.ok(rentalResponseDto);
 	}
 
+	@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 	@GetMapping("/all/{status}")
 	public ResponseEntity<List<RentalResponseDto>> getRentalsOfStatus(@PathVariable RentalStatus status){
 		List<RentalResponseDto> rentalResponseDto = rentalService.getAllRentalsOfStatus(status);
